@@ -1,0 +1,203 @@
+{% extends "_layout.html" %}
+{% set title = "用户" %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 page-header">
+  <h1 class="fw-semibold"><i class="bi bi-people me-2"></i>用户</h1>
+  <div class="text-secondary small">
+    小技巧：点击 <span class="kbd">user_id</span> 进入详情，或用搜索框过滤。
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form class="row gy-2 gx-2 align-items-end" method="get" action="/admin/users">
+      <div class="col-12 col-md-2">
+        <label class="form-label small text-secondary">分层 tier</label>
+        <select class="form-select form-select-sm" name="tier">
+          <option value="" {% if not filters.tier %}selected{% endif %}>全部</option>
+          <option value="A" {% if filters.tier == "A" %}selected{% endif %}>A</option>
+          <option value="B" {% if filters.tier == "B" %}selected{% endif %}>B</option>
+          <option value="C" {% if filters.tier == "C" %}selected{% endif %}>C</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label small text-secondary">意向 intent</label>
+        <select class="form-select form-select-sm" name="intent">
+          <option value="" {% if not filters.intent %}selected{% endif %}>全部</option>
+          <option value="high" {% if filters.intent == "high" %}selected{% endif %}>high</option>
+          <option value="medium" {% if filters.intent == "medium" %}selected{% endif %}>medium</option>
+          <option value="low" {% if filters.intent == "low" %}selected{% endif %}>low</option>
+          <option value="unknown" {% if filters.intent == "unknown" %}selected{% endif %}>unknown</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label small text-secondary">成交状态 status</label>
+        <select class="form-select form-select-sm" name="status">
+          <option value="" {% if not filters.status %}selected{% endif %}>全部</option>
+          <option value="active" {% if filters.status == "active" %}selected{% endif %}>active</option>
+          <option value="won" {% if filters.status == "won" %}selected{% endif %}>won</option>
+          <option value="lost" {% if filters.status == "lost" %}selected{% endif %}>lost</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2">
+        <label class="form-label small text-secondary">每页</label>
+        <select class="form-select form-select-sm" name="per_page">
+          <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+          <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+          <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2">
+        <label class="form-label small text-secondary">搜索 user_id（前端过滤，不提交）</label>
+        <input class="form-control form-control-sm" id="searchUserId" placeholder="输入 user_id 关键字…">
+      </div>
+
+      <div class="col-12 d-flex gap-2">
+        <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-funnel me-1"></i>筛选</button>
+        <a class="btn btn-sm btn-outline-secondary" href="/admin/users"><i class="bi bi-x-circle me-1"></i>清除</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <div class="fw-semibold">用户列表</div>
+    <div class="text-secondary small">共 {{ total }} 条</div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle" id="usersTable">
+        <thead class="table-light">
+          <tr>
+            <th>user_id</th>
+            <th>标签（前3个）</th>
+            <th>成交状态</th>
+            <th>意向</th>
+            <th>分层</th>
+            <th>允许营销</th>
+            <th>last_inbound</th>
+            <th>next_decision</th>
+            <th>今日触达</th>
+            <th style="width: 90px;">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+          <tr data-userid="{{ u.user_id }}">
+            <td class="mono">
+              <a href="/admin/user/{{ u.user_id }}" class="text-decoration-none">{{ u.user_id }}</a>
+              <button class="btn btn-sm btn-link text-secondary p-0 ms-1" type="button" title="复制"
+                      onclick="copyText('{{ u.user_id }}')">
+                <i class="bi bi-copy"></i>
+              </button>
+            </td>
+
+            <td>
+              {% if u.tags_short and (u.tags_short is iterable) %}
+                <div class="d-flex flex-wrap gap-1">
+                  {% for t in u.tags_short %}
+                    <span class="badge text-bg-light border text-dark">{{ t }}</span>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span class="text-secondary small">-</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if u.lifecycle_status == 'won' %}
+                <span class="badge text-bg-success">won</span>
+              {% elif u.lifecycle_status == 'lost' %}
+                <span class="badge text-bg-secondary">lost</span>
+              {% else %}
+                <span class="badge text-bg-primary">active</span>
+              {% endif %}
+            </td>
+            <td><span class="badge text-bg-secondary">{{ u.intent_level }}</span></td>
+            <td>
+              {% if u.tier == 'A' %}
+                <span class="badge text-bg-success">A</span>
+              {% elif u.tier == 'B' %}
+                <span class="badge text-bg-warning text-dark">B</span>
+              {% else %}
+                <span class="badge text-bg-secondary">C</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.opt_in == 1 %}
+                <span class="badge text-bg-success">1</span>
+              {% else %}
+                <span class="badge text-bg-danger">0</span>
+              {% endif %}
+            </td>
+            <td class="mono small">{{ u.last_inbound_at or "" }}</td>
+            <td class="mono small">{{ u.next_decision_at or "" }}</td>
+            <td>{{ u.followup_count_today }}</td>
+            <td><a class="btn btn-sm btn-outline-primary" href="/admin/user/{{ u.user_id }}">详情</a></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card-footer">
+    <div class="d-flex align-items-center justify-content-between">
+      <div>
+        第 {{ page }} / {{ total_pages }} 页
+      </div>
+      <div>
+        <nav aria-label="Page navigation">
+          <ul class="pagination pagination-sm mb-0">
+            {% set base_args = {'tier': filters.tier, 'intent': filters.intent, 'status': filters.status, 'per_page': per_page} %}
+            {% if page > 1 %}
+              <li class="page-item"><a class="page-link" href="{{ url_for('admin_users') }}?{% for k,v in base_args.items() if v %}{{ k }}={{ v }}&{% endfor %}page=1">« 首页</a></li>
+              <li class="page-item"><a class="page-link" href="{{ url_for('admin_users') }}?{% for k,v in base_args.items() if v %}{{ k }}={{ v }}&{% endfor %}page={{ page-1 }}">‹ 上一页</a></li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">« 首页</span></li>
+              <li class="page-item disabled"><span class="page-link">‹ 上一页</span></li>
+            {% endif %}
+
+            {% if page < total_pages %}
+              <li class="page-item"><a class="page-link" href="{{ url_for('admin_users') }}?{% for k,v in base_args.items() if v %}{{ k }}={{ v }}&{% endfor %}page={{ page+1 }}">下一页 ›</a></li>
+              <li class="page-item"><a class="page-link" href="{{ url_for('admin_users') }}?{% for k,v in base_args.items() if v %}{{ k }}={{ v }}&{% endfor %}page={{ total_pages }}">尾页 »</a></li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">下一页 ›</span></li>
+              <li class="page-item disabled"><span class="page-link">尾页 »</span></li>
+            {% endif %}
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // front-end filter by user_id
+  (function () {
+    const input = document.getElementById("searchUserId");
+    const tbody = document.querySelector("#usersTable tbody");
+    if (!input || !tbody) return;
+
+    input.addEventListener("input", () => {
+      const q = input.value.trim().toLowerCase();
+      for (const tr of tbody.querySelectorAll("tr")) {
+        const uid = (tr.getAttribute("data-userid") || "").toLowerCase();
+        tr.style.display = (!q || uid.includes(q)) ? "" : "none";
+      }
+    });
+  })();
+
+  function copyText(s) {
+    navigator.clipboard?.writeText(s).then(()=>{}, ()=>{});
+  }
+</script>
+{% endblock %}

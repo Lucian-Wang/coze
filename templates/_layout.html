@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN" data-bs-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title or "管理后台" }}</title>
+
+  <!-- Bootstrap 5 (国内可访问的 CDN：BootCDN) -->
+  <link href="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons (BootCDN) -->
+  <link href="https://cdn.bootcdn.net/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+  <style>
+    :root { --card-radius: 14px; }
+
+    .app-shell { min-height: 100vh; background: #f6f7fb; }
+    .navbar-glass {
+      background: rgba(255,255,255,.8);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(0,0,0,.06);
+    }
+    .page-header h1 { font-size: 1.1rem; margin: 0; }
+
+    .card { border: 1px solid rgba(0,0,0,.06); border-radius: var(--card-radius); }
+    .card-header { background: rgba(255,255,255,.7); border-bottom: 1px solid rgba(0,0,0,.06); }
+
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    pre.json-box {
+      background: #0b1020;
+      color: #e7ecff;
+      padding: 12px;
+      border-radius: 12px;
+      max-height: 380px;
+      overflow: auto;
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .table thead th { white-space: nowrap; }
+    .badge-soft {
+      background: rgba(13,110,253,.1);
+      color: #0d6efd;
+      border: 1px solid rgba(13,110,253,.2);
+    }
+    .kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      border: 1px solid rgba(0,0,0,.12);
+      background: #fff;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    .sticky-actions { position: sticky; top: 72px; z-index: 10; }
+
+    /* ===== 表格稳定性：避免畸形/被撑爆 ===== */
+    .table-responsive { overflow-x: auto; }
+    table { width: 100%; }
+
+    .table-fixed {
+      table-layout: fixed;
+      width: 100%;
+      min-width: 1050px;
+    }
+    .td-ellipsis {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .td-wrap {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .td-mono-tight { font-size: 12px; }
+    .table-fixed td, .table-fixed th { vertical-align: top; }
+  </style>
+
+  {% block head %}{% endblock %}
+</head>
+
+<body class="app-shell">
+<nav class="navbar navbar-expand-lg navbar-glass sticky-top">
+  <div class="container-fluid px-3 px-md-4">
+    <a class="navbar-brand fw-semibold" href="/admin">
+      <i class="bi bi-speedometer2 me-1"></i> Bot Admin
+    </a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbars"
+            aria-controls="navbars" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbars">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link" href="/admin"><i class="bi bi-grid-1x2 me-1"></i>仪表盘</a></li>
+        <li class="nav-item"><a class="nav-link" href="/admin/users"><i class="bi bi-people me-1"></i>用户</a></li>
+      </ul>
+
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-outline-secondary" id="toggleTheme" type="button" title="切换明暗">
+          <i class="bi bi-moon-stars"></i>
+        </button>
+        <span class="text-secondary small d-none d-md-inline">BasicAuth</span>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<main class="container-fluid px-3 px-md-4 py-3">
+  {% if notice %}
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+      <i class="bi bi-info-circle me-2"></i>
+      <div>{{ notice }}</div>
+    </div>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<script src="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<script>
+  // theme toggle (light/dark)
+  (function () {
+    const key = "admin_theme";
+    const root = document.documentElement;
+    const stored = localStorage.getItem(key);
+    if (stored) root.setAttribute("data-bs-theme", stored);
+
+    document.getElementById("toggleTheme")?.addEventListener("click", () => {
+      const cur = root.getAttribute("data-bs-theme") || "light";
+      const next = cur === "light" ? "dark" : "light";
+      root.setAttribute("data-bs-theme", next);
+      localStorage.setItem(key, next);
+    });
+  })();
+
+  // copy helper
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

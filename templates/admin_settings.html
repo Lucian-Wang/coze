@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8"/>
+  <title>管理后台 - 运营配置</title>
+  <style>
+    body { font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif; margin: 24px; }
+    .row { display: grid; grid-template-columns: 230px 1fr; gap: 10px; margin: 8px 0; max-width: 980px; }
+    input { width: 100%; padding: 6px; }
+    .hint { color: #666; font-size: 13px; }
+    a { color: #0b62d6; text-decoration: none; }
+    button { padding: 8px 14px; }
+    .section { margin-top: 18px; padding-top: 10px; border-top: 1px solid #eee; max-width: 980px; }
+    code { background: #f3f4f6; padding: 1px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h2>管理后台 - 运营配置</h2>
+  <p><a href="/admin">返回仪表盘</a></p>
+
+  <form method="post">
+    <div class="row">
+      <div>marketing_enabled</div>
+      <div><input name="marketing_enabled" value="{{ settings.get('marketing_enabled','1') }}"><div class="hint">1 开启 / 0 关闭</div></div>
+    </div>
+
+    <div class="row">
+      <div>opt_in_default</div>
+      <div><input name="opt_in_default" value="{{ settings.get('opt_in_default','1') }}"><div class="hint">新用户默认是否允许营销：1/0</div></div>
+    </div>
+
+    <div class="row">
+      <div>decision_idle_minutes</div>
+      <div><input name="decision_idle_minutes" value="{{ settings.get('decision_idle_minutes','10') }}"><div class="hint">沉默多少分钟触发评估</div></div>
+    </div>
+
+    <div class="row">
+      <div>decision_scan_interval_seconds</div>
+      <div><input name="decision_scan_interval_seconds" value="{{ settings.get('decision_scan_interval_seconds','60') }}"><div class="hint">扫描间隔（秒）。修改后建议重启服务。</div></div>
+    </div>
+
+    <div class="row">
+      <div>daily_followup_limit</div>
+      <div><input name="daily_followup_limit" value="{{ settings.get('daily_followup_limit','5') }}"><div class="hint">��用户每天最多主动触达条数</div></div>
+    </div>
+
+    <div class="row">
+      <div>min_followup_interval_minutes</div>
+      <div><input name="min_followup_interval_minutes" value="{{ settings.get('min_followup_interval_minutes','30') }}"><div class="hint">两次外呼最小间隔（分钟）</div></div>
+    </div>
+
+    <div class="row">
+      <div>won_threshold</div>
+      <div><input name="won_threshold" value="{{ settings.get('won_threshold','0.90') }}"><div class="hint">成交判定阈值（0~1）</div></div>
+    </div>
+
+    <div class="row">
+      <div>quiet_hours_enabled</div>
+      <div><input name="quiet_hours_enabled" value="{{ settings.get('quiet_hours_enabled','1') }}"><div class="hint">夜间免打扰：1/0</div></div>
+    </div>
+
+    <div class="row">
+      <div>quiet_hours_start</div>
+      <div><input name="quiet_hours_start" value="{{ settings.get('quiet_hours_start','00:00') }}"><div class="hint">免打扰开始（HH:MM）</div></div>
+    </div>
+
+    <div class="row">
+      <div>quiet_hours_end</div>
+      <div><input name="quiet_hours_end" value="{{ settings.get('quiet_hours_end','08:00') }}"><div class="hint">免打扰结束（HH:MM）</div></div>
+    </div>
+
+    <div class="row">
+      <div>quiet_hours_defer_minutes</div>
+      <div><input name="quiet_hours_defer_minutes" value="{{ settings.get('quiet_hours_defer_minutes','5') }}"><div class="hint">免打扰结束后延迟 N 分钟再评估</div></div>
+    </div>
+
+    <div class="row">
+      <div>max_messages_for_decision</div>
+      <div><input name="max_messages_for_decision" value="{{ settings.get('max_messages_for_decision','80') }}"><div class="hint">决策喂给模型的消息条数</div></div>
+    </div>
+
+    <div class="row">
+      <div>max_days_for_decision</div>
+      <div><input name="max_days_for_decision" value="{{ settings.get('max_days_for_decision','14') }}"><div class="hint">仅取最近 N 天消息</div></div>
+    </div>
+
+    <div class="row">
+      <div>next_decision_cooldown_minutes_default</div>
+      <div><input name="next_decision_cooldown_minutes_default" value="{{ settings.get('next_decision_cooldown_minutes_default','30') }}"><div class="hint">默认下次评估冷却（分钟）</div></div>
+    </div>
+
+    <div class="section">
+      <h3 style="margin: 0 0 8px 0; font-size: 16px;">聊天记录存储（环境变量）</h3>
+      <div class="hint">
+        以下为环境变量开关（.env / 系统环境），不在 settings 表里保存：<br>
+        <code>STORE_DERIVED_TEXT</code>：是否保存 ASR/OCR 派生文本（默认 1）<br>
+        <code>STORE_AUDIO_URL</code>：是否在 extra_json 里保存上传后的 wavUrl（默认 0）<br>
+        说明：你也可以把它们扩展为 settings 表配置，但现阶段建议用环境变量避免误操作。
+      </div>
+    </div>
+
+    <button type="submit">保存</button>
+  </form>
+</body>
+</html>

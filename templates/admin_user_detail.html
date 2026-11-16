@@ -1,0 +1,492 @@
+{% extends "_layout.html" %}
+{% set title = "用户详情" %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 page-header">
+  <div>
+    <h1 class="fw-semibold"><i class="bi bi-person-badge me-2"></i>用户详情</h1>
+    {% if user %}
+      <div class="text-secondary small">user_id：<span class="mono">{{ user.user_id }}</span></div>
+    {% endif %}
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-sm btn-outline-secondary" href="/admin/users"><i class="bi bi-arrow-left me-1"></i>返回列表</a>
+  </div>
+</div>
+
+{% if not user %}
+  <div class="alert alert-danger">用户不存在</div>
+{% else %}
+
+{% macro msg_type_badge(m) %}
+  {% set t = (m.msg_type or '') %}
+  {% if t == 'text' %}
+    <span class="badge text-bg-light border text-dark">text</span>
+  {% elif t == 'asr_text' %}
+    <span class="badge text-bg-info text-dark">ASR</span>
+  {% elif t == 'voice_wav' %}
+    <span class="badge text-bg-warning text-dark">WAV</span>
+  {% elif t == 'voice_meta' %}
+    <span class="badge text-bg-secondary">voice_meta</span>
+  {% elif t == 'image_ocr' %}
+    <span class="badge text-bg-info text-dark">OCR</span>
+  {% elif t == 'image_meta' %}
+    <span class="badge text-bg-secondary">image_meta</span>
+  {% else %}
+    <span class="badge text-bg-secondary">{{ t or 'unknown' }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro src_badge(m) %}
+  {% set s = (m.source_type or '') %}
+  {% if not s %}
+    <span class="badge text-bg-light border text-dark">-</span>
+  {% elif s in ['qiwe_text','qiwe_voice','qiwe_image'] %}
+    <span class="badge text-bg-primary">{{ s }}</span>
+  {% elif s in ['doubao_asr','ark_ocr'] %}
+    <span class="badge text-bg-info text-dark">{{ s }}</span>
+  {% elif s in ['local_pipeline'] %}
+    <span class="badge text-bg-warning text-dark">{{ s }}</span>
+  {% elif s in ['coze_reply'] %}
+    <span class="badge text-bg-success">{{ s }}</span>
+  {% else %}
+    <span class="badge text-bg-secondary">{{ s }}</span>
+  {% endif %}
+{% endmacro %}
+
+<div class="row g-3">
+  <!-- Left -->
+  <div class="col-12 col-lg-4">
+    <div class="card sticky-actions">
+      <div class="card-header fw-semibold d-flex align-items-center justify-content-between">
+        <span>概览（人话）</span>
+        <button class="btn btn-sm btn-outline-secondary" type="button"
+                onclick="copyText('{{ user.user_id }}')"><i class="bi bi-copy me-1"></i>复制ID</button>
+      </div>
+
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          {% if user.lifecycle_status == 'won' %}
+            <span class="badge text-bg-success">won</span>
+          {% elif user.lifecycle_status == 'lost' %}
+            <span class="badge text-bg-secondary">lost</span>
+          {% else %}
+            <span class="badge text-bg-primary">active</span>
+          {% endif %}
+
+          <span class="badge text-bg-secondary">intent {{ user.intent_level }}</span>
+
+          {% if user.tier == 'A' %}
+            <span class="badge text-bg-success">tier A</span>
+          {% elif user.tier == 'B' %}
+            <span class="badge text-bg-warning text-dark">tier B</span>
+          {% else %}
+            <span class="badge text-bg-secondary">tier C</span>
+          {% endif %}
+
+          {% if user.opt_in == 1 %}
+            <span class="badge text-bg-success">marketing 1</span>
+          {% else %}
+            <span class="badge text-bg-danger">marketing 0</span>
+          {% endif %}
+        </div>
+
+        <table class="table table-sm mb-3">
+          <tr><th class="text-secondary small">last_inbound</th><td class="mono small">{{ user.last_inbound_at or "" }}</td></tr>
+          <tr><th class="text-secondary small">last_outbound</th><td class="mono small">{{ user.last_outbound_at or "" }}</td></tr>
+          <tr><th class="text-secondary small">next_decision</th><td class="mono small">{{ user.next_decision_at or "" }}</td></tr>
+          <tr><th class="text-secondary small">今日触达</th><td>{{ user.followup_count_today }}</td></tr>
+        </table>
+
+        <!-- Tags -->
+        <div class="mb-3">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="fw-semibold">标签</div>
+            <button class="btn btn-sm btn-outline-secondary" type="button"
+                    onclick="copyText(document.getElementById('leftTagsText').innerText)">
+              <i class="bi bi-copy me-1"></i>复制
+            </button>
+          </div>
+
+          <div class="mt-2" id="leftTagsText">
+            {% if tag_list and (tag_list is iterable) %}
+              <div class="d-flex flex-wrap gap-2">
+                {% for t in tag_list %}
+                  <span class="badge text-bg-light border text-dark">{{ t }}</span>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-secondary small">暂无标签</div>
+            {% endif %}
+          </div>
+
+          <div class="text-secondary small mt-2">
+            标签来源：用户表 tags_json（若为空，后端已兜底为 last_decision_json.tags）。
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+          <form method="post" action="/admin/user/{{ user.user_id }}/recompute">
+            <button class="btn btn-sm btn-outline-primary" type="submit">
+              <i class="bi bi-arrow-repeat me-1"></i>清空 next_decision_at
+            </button>
+          </form>
+
+          <form method="post" action="/admin/user/{{ user.user_id }}/evaluate_now">
+            <button class="btn btn-sm btn-primary" type="submit">
+              <i class="bi bi-cpu me-1"></i>立即评估（不发送）
+            </button>
+          </form>
+
+          <form method="post" action="/admin/user/{{ user.user_id }}/evaluate_now?send=1"
+                onsubmit="return confirm('确定要立即评估并可能发送一条跟进吗？（谨慎）');">
+            <button class="btn btn-sm btn-outline-danger" type="submit">
+              <i class="bi bi-send me-1"></i>评估并允许发送一次跟进
+            </button>
+          </form>
+        </div>
+
+        <div class="text-secondary small mt-2">
+          说明：立即评估是后台异步任务，提交后稍等片刻刷新页面查看结果。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right -->
+  <div class="col-12 col-lg-8">
+    <div class="card">
+      <div class="card-header fw-semibold">详情</div>
+      <div class="card-body">
+        <ul class="nav nav-tabs" id="detailTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat" type="button" role="tab">
+              <i class="bi bi-chat-left-text me-1"></i>聊天
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="decision-tab" data-bs-toggle="tab" data-bs-target="#decision" type="button" role="tab">
+              <i class="bi bi-diagram-3 me-1"></i>决策
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab">
+              <i class="bi bi-person-lines-fill me-1"></i>画像/标签JSON
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit" type="button" role="tab">
+              <i class="bi bi-clipboard-data me-1"></i>审计
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content pt-3">
+          <!-- Chat -->
+          <div class="tab-pane fade show active" id="chat" role="tabpanel">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+              <div class="text-secondary small">共 {{ messages|length }} 条</div>
+
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <select class="form-select form-select-sm" id="chatTypeFilter" style="max-width: 190px;">
+                  <option value="">全部类型</option>
+                  <option value="text">text</option>
+                  <option value="asr_text">asr_text</option>
+                  <option value="voice_wav">voice_wav</option>
+                  <option value="voice_meta">voice_meta</option>
+                  <option value="image_ocr">image_ocr</option>
+                  <option value="image_meta">image_meta</option>
+                </select>
+
+                <select class="form-select form-select-sm" id="chatDirFilter" style="max-width: 120px;">
+                  <option value="">全部方向</option>
+                  <option value="in">in</option>
+                  <option value="out">out</option>
+                </select>
+
+                <input class="form-control form-control-sm" id="chatSearch" placeholder="搜索聊天内容（前端过滤）" style="max-width: 280px;">
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-hover align-middle table-fixed" id="chatTable">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 160px;">时间</th>
+                    <th style="width: 64px;">方向</th>
+                    <th style="width: 96px;">类型</th>
+                    <th style="width: 120px;">来源</th>
+                    <th style="width: 140px;">ref</th>
+                    <th style="width: 520px;">内容</th>
+                    <th style="width: 150px;">extra</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for m in messages %}
+                    <tr
+                      data-text="{{ (m.text or '')|lower }}"
+                      data-type="{{ (m.msg_type or '') }}"
+                      data-dir="{{ (m.direction or '') }}"
+                    >
+                      <td class="mono small td-mono-tight td-ellipsis">{{ m.created_at }}</td>
+                      <td>
+                        {% if m.direction == 'in' %}
+                          <span class="badge text-bg-primary">in</span>
+                        {% else %}
+                          <span class="badge text-bg-secondary">out</span>
+                        {% endif %}
+                      </td>
+                      <td>{{ msg_type_badge(m) }}</td>
+                      <td>{{ src_badge(m) }}</td>
+                      <td class="mono small td-mono-tight td-ellipsis" title="{{ m.ref_id or '' }}">{{ m.ref_id or "" }}</td>
+                      <td class="td-wrap">{{ m.text }}</td>
+                      <td>
+                        {% if m.extra_json %}
+                          <div class="d-flex gap-1 flex-wrap">
+                            <button class="btn btn-sm btn-outline-secondary" type="button"
+                                    data-extra="{{ m.extra_json|e }}"
+                                    onclick="openExtra(this)">
+                              查看
+                            </button>
+
+                            {% if m.msg_type == 'voice_wav' %}
+                            <button class="btn btn-sm btn-outline-primary" type="button"
+                                    data-extra="{{ m.extra_json|e }}"
+                                    onclick="playWavFromExtra(this)">
+                              播放
+                            </button>
+                            {% else %}
+                            <button class="btn btn-sm btn-outline-primary d-none" type="button"
+                                    data-extra="{{ m.extra_json|e }}"
+                                    onclick="playWavFromExtra(this)">
+                              播放
+                            </button>
+                            {% endif %}
+                          </div>
+                        {% else %}
+                          <span class="text-secondary small">-</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Extra modal -->
+            <div class="modal fade" id="extraModal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">extra_json</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <pre class="json-box" id="extraModalPre" style="max-height: 60vh;"></pre>
+                  </div>
+                  <div class="modal-footer">
+                    <button class="btn btn-sm btn-outline-secondary" type="button"
+                            onclick="copyText(document.getElementById('extraModalPre').innerText)">
+                      <i class="bi bi-copy me-1"></i>复制
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary" data-bs-dismiss="modal">关闭</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Audio modal -->
+            <div class="modal fade" id="audioModal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">语音播放</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <audio id="audioPlayer" controls style="width: 100%;"></audio>
+                    <div class="mt-2 small text-secondary">
+                      wav_url：<span class="mono" id="audioUrlText"></span>
+                      <button class="btn btn-sm btn-link" type="button" onclick="copyText(document.getElementById('audioUrlText').innerText)">复制</button>
+                      <a class="btn btn-sm btn-link" id="audioOpenLink" href="#" target="_blank" rel="noopener">新窗口打开</a>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-primary" data-bs-dismiss="modal">关闭</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Decision -->
+          <div class="tab-pane fade" id="decision" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="text-secondary small">last_decision_json（中文已保留）</div>
+              <button class="btn btn-sm btn-outline-secondary" type="button" onclick="copyText(document.getElementById('decisionJson').innerText)">
+                <i class="bi bi-copy me-1"></i>复制 JSON
+              </button>
+            </div>
+            <pre class="json-box" id="decisionJson">{{ decision_text }}</pre>
+          </div>
+
+          <!-- Profile -->
+          <div class="tab-pane fade" id="profile" role="tabpanel">
+            <div class="row g-3">
+              <div class="col-12 col-lg-6">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="text-secondary small">profile_json</div>
+                  <button class="btn btn-sm btn-outline-secondary" type="button" onclick="copyText(document.getElementById('profileJson').innerText)">
+                    <i class="bi bi-copy me-1"></i>复制
+                  </button>
+                </div>
+                <pre class="json-box" id="profileJson">{{ profile_text }}</pre>
+              </div>
+              <div class="col-12 col-lg-6">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="text-secondary small">tags_json</div>
+                  <button class="btn btn-sm btn-outline-secondary" type="button" onclick="copyText(document.getElementById('tagsJson').innerText)">
+                    <i class="bi bi-copy me-1"></i>复制
+                  </button>
+                </div>
+                <pre class="json-box" id="tagsJson">{{ tags_text }}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audit -->
+          <div class="tab-pane fade" id="audit" role="tabpanel">
+            <div class="text-secondary small mb-2">共 {{ followups|length }} 条</div>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle table-fixed">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 170px;">时间</th>
+                    <th style="width: 80px;">状态</th>
+                    <th style="width: 90px;">类型</th>
+                    <th style="width: 90px;">置信度</th>
+                    <th>原因</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for f in followups %}
+                    <tr>
+                      <td class="mono small td-ellipsis">{{ f.created_at }}</td>
+                      <td>
+                        {% if f.status == 'sent' %}
+                          <span class="badge text-bg-success">sent</span>
+                        {% elif f.status == 'failed' %}
+                          <span class="badge text-bg-danger">failed</span>
+                        {% else %}
+                          <span class="badge text-bg-secondary">skipped</span>
+                        {% endif %}
+                      </td>
+                      <td class="td-ellipsis">{{ f.followup_type }}</td>
+                      <td class="td-ellipsis">{{ f.confidence }}</td>
+                      <td class="td-wrap">{{ f.reason }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Chat front-end filters
+  (function () {
+    const input = document.getElementById("chatSearch");
+    const tbody = document.querySelector("#chatTable tbody");
+    const typeSel = document.getElementById("chatTypeFilter");
+    const dirSel = document.getElementById("chatDirFilter");
+    if (!tbody) return;
+
+    function apply() {
+      const q = (input?.value || "").trim().toLowerCase();
+      const tFilter = (typeSel?.value || "").trim();
+      const dFilter = (dirSel?.value || "").trim();
+
+      for (const tr of tbody.querySelectorAll("tr")) {
+        const t = (tr.getAttribute("data-text") || "");
+        const typ = (tr.getAttribute("data-type") || "");
+        const dir = (tr.getAttribute("data-dir") || "");
+        const okQ = (!q || t.includes(q));
+        const okT = (!tFilter || typ === tFilter);
+        const okD = (!dFilter || dir === dFilter);
+        tr.style.display = (okQ && okT && okD) ? "" : "none";
+      }
+    }
+
+    input?.addEventListener("input", apply);
+    typeSel?.addEventListener("change", apply);
+    dirSel?.addEventListener("change", apply);
+  })();
+
+  // extra_json modal
+  function openExtra(btn) {
+    let raw = "";
+    try {
+      raw = btn?.getAttribute("data-extra") || "";
+    } catch (e) {}
+
+    try {
+      const obj = JSON.parse(raw);
+      raw = JSON.stringify(obj, null, 2);
+    } catch (e) {}
+
+    const pre = document.getElementById("extraModalPre");
+    if (pre) pre.textContent = raw || "";
+
+    const el = document.getElementById("extraModal");
+    if (el) bootstrap.Modal.getOrCreateInstance(el).show();
+  }
+
+  function _extractWavUrl(extraRaw) {
+    try {
+      const obj = JSON.parse(extraRaw || "{}");
+      const u = obj?.wavUrl;
+      if (typeof u === "string" && u.startsWith("http")) return u;
+    } catch (e) {}
+    return "";
+  }
+
+  // 初始化：如果某行 extra_json 里有 wavUrl，则把“播放”按钮显示出来
+  (function () {
+    const btns = document.querySelectorAll("button[onclick='playWavFromExtra(this)']");
+    for (const b of btns) {
+      const raw = b.getAttribute("data-extra") || "";
+      const wav = _extractWavUrl(raw);
+      if (wav) b.classList.remove("d-none");
+    }
+  })();
+
+  function playWavFromExtra(btn) {
+    const raw = btn?.getAttribute("data-extra") || "";
+    const wav = _extractWavUrl(raw);
+    if (!wav) return;
+
+    const audio = document.getElementById("audioPlayer");
+    const urlText = document.getElementById("audioUrlText");
+    const openLink = document.getElementById("audioOpenLink");
+
+    if (audio) {
+      audio.src = wav;
+      try { audio.load(); } catch (e) {}
+    }
+    if (urlText) urlText.textContent = wav;
+    if (openLink) openLink.href = wav;
+
+    const el = document.getElementById("audioModal");
+    if (el) bootstrap.Modal.getOrCreateInstance(el).show();
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "_layout.html" %}
+{% set title = "仪表盘" %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 page-header">
+  <h1 class="fw-semibold"><i class="bi bi-grid-1x2 me-2"></i>仪表盘</h1>
+  <div class="text-secondary small">更新时间：{{ stats.updated_at or "" }}</div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-md-4">
+    <div class="card">
+      <div class="card-header fw-semibold">用户</div>
+      <div class="card-body">
+        <div class="d-flex align-items-end gap-3">
+          <div>
+            <div class="text-secondary small">总用户</div>
+            <div class="fs-3 fw-semibold">{{ stats.users_total or 0 }}</div>
+          </div>
+          <div>
+            <div class="text-secondary small">Active</div>
+            <div class="fs-3 fw-semibold">{{ stats.users_active or 0 }}</div>
+          </div>
+          <div>
+            <div class="text-secondary small">Won</div>
+            <div class="fs-3 fw-semibold">{{ stats.users_won or 0 }}</div>
+          </div>
+        </div>
+        <a href="/admin/users" class="btn btn-sm btn-primary mt-3"><i class="bi bi-people me-1"></i>进入用户列表</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <div class="card">
+      <div class="card-header fw-semibold">意向分布</div>
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+          <span class="badge badge-soft">high {{ stats.intent_high or 0 }}</span>
+          <span class="badge badge-soft">medium {{ stats.intent_medium or 0 }}</span>
+          <span class="badge badge-soft">low {{ stats.intent_low or 0 }}</span>
+          <span class="badge text-bg-secondary">unknown {{ stats.intent_unknown or 0 }}</span>
+        </div>
+        <div class="text-secondary small mt-2">unknown 通常表示信息不足或未评估。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <div class="card">
+      <div class="card-header fw-semibold">分层</div>
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+          <span class="badge text-bg-success">A {{ stats.tier_A or 0 }}</span>
+          <span class="badge text-bg-warning">B {{ stats.tier_B or 0 }}</span>
+          <span class="badge text-bg-secondary">C {{ stats.tier_C or 0 }}</span>
+        </div>
+        <div class="text-secondary small mt-2">分层用于决定运营优先级与跟进强度。</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
